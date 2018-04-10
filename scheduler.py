@@ -1,8 +1,11 @@
 from redis import StrictRedis
+from google.cloud import pubsub_v1
 
 from yajl import dumps
 from time import sleep
 from queue import Queue
+
+from config import Config
 
 
 class Scheduler:
@@ -17,15 +20,19 @@ class Scheduler:
         self.worker_queue = Queue()
         self.job_queue = Queue()
         self.thread = None
+        self.project = Config.get("project_name", "dfunc-bu")
+        self.publisher = pubsub_v1.PublisherClient()
 
     def __publish(self, worker, job):
         """
         Publish to worker
         :param worker: worker ID
         :param job: Job ID
-        :return: Nada
         """
-        return
+        worker = worker.encode('utf-8')
+        job = job.encode('utf-8')
+        topic_path = self.publisher.topic_path(self.project, worker)
+        self.publisher.publish(topic_path, job)
 
     def handler(self, data):
         """
@@ -38,7 +45,7 @@ class Scheduler:
             self.worker_queue.put(msg["data"])
         elif msg["channel"] == self.job_queue_name:
             self.job_queue.put(msg["data"])
-        if not (self.worker_queue.empty() and self.job_queue.empty()):
+        while not (self.worker_queue.empty() and self.job_queue.empty()):
             worker = self.worker_queue.get()
             job = self.job_queue.get()
             self.__publish(worker, job)
