@@ -40,10 +40,11 @@ class Scheduler:
         :param data:
         """
         msg = dumps(data)
+        channel = str(msg["channel"]).encode("utf-8")
         # print(msg)
-        if msg["channel"] == self.worker_queue_name:
+        if channel == self.worker_queue_name:
             self.worker_queue.put(msg["data"])
-        elif msg["channel"] == self.job_queue_name:
+        elif channel == self.job_queue_name:
             self.job_queue.put(msg["data"])
         while not (self.worker_queue.empty() and self.job_queue.empty()):
             worker = self.worker_queue.get()
