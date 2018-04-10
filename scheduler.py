@@ -40,8 +40,8 @@ class Scheduler:
         :param data:
         """
         msg = dumps(data)
-        channel = str(msg["channel"]).encode("utf-8")
-        # print(msg)
+        #print(msg)
+        channel = str(data["channel"]).encode("utf-8")
         if channel == self.worker_queue_name:
             self.worker_queue.put(msg["data"])
         elif channel == self.job_queue_name:
