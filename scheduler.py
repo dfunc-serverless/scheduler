@@ -3,7 +3,7 @@ from google.cloud import pubsub_v1
 
 from yajl import dumps
 from time import sleep
-from queue import Queue
+from collections import deque
 
 from config import Config
 
@@ -17,8 +17,8 @@ class Scheduler:
         """
         self.job_queue_name = jq_name
         self.worker_queue_name = wq_name
-        self.worker_queue = Queue()
-        self.job_queue = Queue()
+        self.worker_queue = deque()
+        self.job_queue = deque()
         self.thread = None
         self.project = Config.get("project_name", "dfunc-bu")
         self.publisher = pubsub_v1.PublisherClient()
@@ -29,9 +29,9 @@ class Scheduler:
         :param worker: worker ID
         :param job: Job ID
         """
-        worker = worker.encode('utf-8')
-        job = job.encode('utf-8')
-        topic_path = self.publisher.topic_path(self.project, worker)
+        topic_path = "projects/%s/topics/worker-%s" % (self.project,
+                                                       worker.decode('ascii'))
+        self.publisher.create_topic(topic_path)
         self.publisher.publish(topic_path, job)
 
     def handler(self, data):
@@ -39,16 +39,14 @@ class Scheduler:
         Handle jobs and workers
         :param data:
         """
-        msg = dumps(data)
-        #print(msg)
-        channel = str(data["channel"]).encode("utf-8")
+        channel = data["channel"].decode('ascii')
         if channel == self.worker_queue_name:
-            self.worker_queue.put(msg["data"])
+            self.worker_queue.append(data["data"])
         elif channel == self.job_queue_name:
-            self.job_queue.put(msg["data"])
-        while not (self.worker_queue.empty() and self.job_queue.empty()):
-            worker = self.worker_queue.get()
-            job = self.job_queue.get()
+            self.job_queue.append(data["data"])
+        while self.worker_queue and self.job_queue:
+            worker = self.worker_queue.pop()
+            job = self.job_queue.pop()
             self.__publish(worker, job)
 
     def start_threads(self):
