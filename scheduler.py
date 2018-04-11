@@ -29,9 +29,6 @@ class Scheduler:
         :param worker: worker ID
         :param job: Job ID
         """
-        topic_path = "projects/%s/topics/worker-%s" % (self.project,
-                                                       worker.decode('ascii'))
-        self.publisher.create_topic(topic_path)
         self.publisher.publish(topic_path, job)
 
     def handler(self, data):
@@ -41,6 +38,9 @@ class Scheduler:
         """
         channel = data["channel"].decode('ascii')
         if channel == self.worker_queue_name:
+            topic_path = "projects/%s/topics/worker-%s" % (self.project,
+                                                       data["data"].decode('ascii'))
+            self.publisher.create_topic(topic_path)
             self.worker_queue.append(data["data"])
         elif channel == self.job_queue_name:
             self.job_queue.append(data["data"])
