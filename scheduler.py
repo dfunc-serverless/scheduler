@@ -29,7 +29,10 @@ class Scheduler:
         :param worker: worker ID
         :param job: Job ID
         """
+        topic_path = "projects/%s/topics/worker-%s" % (self.project,
+                                                       worker.decode('ascii'))
         self.publisher.publish(topic_path, job)
+        print("%s scheduled on %s" % (job, worker))
 
     def handler(self, data):
         """
@@ -37,10 +40,14 @@ class Scheduler:
         :param data:
         """
         channel = data["channel"].decode('ascii')
+        print(data)
         if channel == self.worker_queue_name:
             topic_path = "projects/%s/topics/worker-%s" % (self.project,
                                                        data["data"].decode('ascii'))
-            self.publisher.create_topic(topic_path)
+            try:
+                self.publisher.create_topic(topic_path)
+            except:
+                pass
             self.worker_queue.append(data["data"])
         elif channel == self.job_queue_name:
             self.job_queue.append(data["data"])
