@@ -1,3 +1,0 @@
-redis
-google-cloud-pubsub
-yajl
