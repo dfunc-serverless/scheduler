@@ -1,11 +1,18 @@
 from redis import StrictRedis
 from google.cloud import pubsub_v1
 
-from yajl import dumps
+from json import dumps
 from time import sleep
 from collections import deque
 
 from config import Config
+
+
+def get_redis_connection():
+    host = Config.get("redis_host", default="127.0.0.1")
+    port = Config.get("redis_port", default=6379)
+    db = Config.get("redis_db", default=0)
+    return StrictRedis(host=host, port=port, db=db)
 
 
 class Scheduler:
@@ -43,7 +50,7 @@ class Scheduler:
         print(data)
         if channel == self.worker_queue_name:
             topic_path = "projects/%s/topics/worker-%s" % (self.project,
-                                                       data["data"].decode('ascii'))
+                                                           data["data"].decode('ascii'))
             try:
                 self.publisher.create_topic(topic_path)
             except:
@@ -61,7 +68,7 @@ class Scheduler:
         Starts scheduler threads
         :return:
         """
-        redis_client = StrictRedis()
+        redis_client = get_redis_connection()
         pub = redis_client.pubsub()
         pub.subscribe(**{
             self.job_queue_name: self.handler,

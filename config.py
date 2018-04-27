@@ -20,7 +20,7 @@ class Config:
         if name in environ:
             val = environ[name]
             cls.__cache[name] = val
-            return
+            return val
         elif default is not None:
             return default
         else:
